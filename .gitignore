@@ -53,3 +53,7 @@ buildNumber.properties
 
 # Evitar ignorar arquivos do Maven wrapper
 !maven-wrapper.jar 
+
+# Ignorar arquivos do banco de dados H2
+data/*.mv.db
+data/*.trace.db
