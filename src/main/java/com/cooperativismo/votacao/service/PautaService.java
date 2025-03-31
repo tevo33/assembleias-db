@@ -22,9 +22,9 @@ public class PautaService
     @Transactional( readOnly = true )
     public List<PautaDTO> listarPautas() 
     {
-        log.info("Listando todas as pautas" );
+        log.info( "Listando todas as pautas" );
 
-        return pautaRepository.findAll().stream().map( this::convertToDto ).collect( Collectors.toList() );
+        return pautaRepository.findAll().stream().map( PautaDTO::convertToDto ).collect( Collectors.toList() );
     }
 
     @Transactional( readOnly = true )
@@ -33,7 +33,7 @@ public class PautaService
         log.info( "Buscando pauta com ID: {}", id );
         Pauta pauta = pautaRepository.findById( id ).orElseThrow( () -> new ResourceNotFoundException( "Pauta", id ) );
 
-        return convertToDto( pauta );
+        return PautaDTO.convertToDto( pauta );
     }
 
     @Transactional
@@ -41,26 +41,9 @@ public class PautaService
     {
         log.info( "Criando pauta: {}", pautaDTO.getTitulo() );
     
-        Pauta pauta = convertToEntity( pautaDTO );
+        Pauta pauta = Pauta.convertToEntity( pautaDTO );
         pauta = pautaRepository.save( pauta );
     
-        return convertToDto( pauta );
-    }
-
-    private PautaDTO convertToDto( Pauta pauta )
-    {
-        return PautaDTO.builder()
-                       .id( pauta.getId() )
-                       .titulo( pauta.getTitulo() )
-                       .descricao( pauta.getDescricao() )
-                       .build();
-    }
-
-    private Pauta convertToEntity( PautaDTO pautaDTO )
-    {
-        return Pauta.builder()
-                    .titulo(pautaDTO.getTitulo())
-                    .descricao(pautaDTO.getDescricao())
-                    .build();
+        return PautaDTO.convertToDto( pauta );
     }
 } 

@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 
 import javax.validation.constraints.NotBlank;
 
+import com.cooperativismo.votacao.model.Pauta;
+
 @Getter
 @Builder
 @NoArgsConstructor
@@ -19,4 +21,13 @@ public class PautaDTO
     private String titulo;
     
     private String descricao;
+
+    public static PautaDTO convertToDto( Pauta pauta )
+    {
+        return PautaDTO.builder()
+                       .id( pauta.getId() )
+                       .titulo( pauta.getTitulo() )
+                       .descricao( pauta.getDescricao() )
+                       .build();
+    }
 } 

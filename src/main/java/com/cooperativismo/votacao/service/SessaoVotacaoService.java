@@ -56,7 +56,7 @@ public class SessaoVotacaoService
         
         sessaoVotacao = sessaoVotacaoRepository.save( sessaoVotacao );
         
-        return convertToDto( sessaoVotacao );
+        return SessaoVotacaoDTO.convertToDto( sessaoVotacao );
     }
     
     @Transactional( readOnly = true )
@@ -80,22 +80,7 @@ public class SessaoVotacaoService
         long votosSim   = votoRepository.countByPautaIdAndOpcaoVoto( pautaId, Voto.OpcaoVoto.SIM );
         long votosNao   = votoRepository.countByPautaIdAndOpcaoVoto( pautaId, Voto.OpcaoVoto.NAO );
         
-        String resultado;
-
-        if ( votosSim > votosNao ) 
-        {
-            resultado = "APROVADA";
-        } 
-        
-        else if ( votosNao > votosSim )
-        {
-            resultado = "REJEITADA";
-        } 
-        
-        else 
-        {
-            resultado = "EMPATE";
-        }
+        String resultado = getResultadoVotacao( votosSim, votosNao );
         
         ResultadoVotacaoDTO resultadoDTO = ResultadoVotacaoDTO.builder()
                                   .pautaId( pautaId )
@@ -137,21 +122,19 @@ public class SessaoVotacaoService
             callbackService.notificarResultadoVotacao( resultado );
         }
     }
-    
-    private SessaoVotacaoDTO convertToDto( SessaoVotacao sessaoVotacao )
-    {
-        long duracaoSegundos = java.time.Duration.between( sessaoVotacao.getDataAbertura(),
-                                                           sessaoVotacao.getDataFechamento() ).getSeconds();
 
-        int duracaoMinutos = (int) Math.max( 1, Math.ceil( duracaoSegundos / 60.0 ) );
+    private String getResultadoVotacao( long votosSim, long votosNao )
+    {
+        if ( votosSim > votosNao )
+        {
+            return "APROVADA";
+        } 
         
-        return SessaoVotacaoDTO.builder()
-                               .id( sessaoVotacao.getId() )
-                               .duracaoMinutos( duracaoMinutos )
-                               .pautaId( sessaoVotacao.getPauta().getId() )
-                               .dataAbertura( sessaoVotacao.getDataAbertura() )
-                               .dataFechamento( sessaoVotacao.getDataFechamento() )
-                               .ativa( sessaoVotacao.isAtiva() )
-                               .build();
+        else if ( votosNao > votosSim )
+        {
+            return "REJEITADA";
+        }
+        
+        return "EMPATE";
     }
 } 

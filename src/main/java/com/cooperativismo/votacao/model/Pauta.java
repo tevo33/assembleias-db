@@ -7,6 +7,9 @@ import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
+
+import com.cooperativismo.votacao.dto.PautaDTO;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,5 +44,13 @@ public class Pauta
     public void prePersist()
     {
         dataCriacao = LocalDateTime.now();
+    }
+
+    public static Pauta convertToEntity( PautaDTO pautaDTO )
+    {
+        return Pauta.builder()
+                    .titulo( pautaDTO.getTitulo() )
+                    .descricao( pautaDTO.getDescricao() )
+                    .build();
     }
 } 

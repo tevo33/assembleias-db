@@ -66,16 +66,6 @@ public class VotoService
         
         voto = votoRepository.save( voto );
         
-        return convertToDto( voto );
-    }
-    
-    private VotoDTO convertToDto( Voto voto )
-    {
-        return VotoDTO.builder()
-                      .id( voto.getId() )
-                      .pautaId( voto.getPauta().getId() )
-                      .cpfAssociado( voto.getCpfAssociado() )
-                      .opcaoVoto( voto.getOpcaoVoto() )
-                      .build();
+        return VotoDTO.convertToDto( voto );
     }
 } 

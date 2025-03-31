@@ -1,5 +1,6 @@
 package com.cooperativismo.votacao.dto;
 
+import com.cooperativismo.votacao.model.Voto;
 import com.cooperativismo.votacao.model.Voto.OpcaoVoto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -27,4 +28,22 @@ public class VotoDTO
     
     @NotNull( message = "O voto é obrigatório (SIM ou NAO)" )
     private OpcaoVoto opcaoVoto;
+
+    public static VotoDTO convertToDto( Voto voto )
+    {
+        return VotoDTO.builder()
+                      .id( voto.getId() )
+                      .pautaId( voto.getPauta().getId() )
+                      .cpfAssociado( voto.getCpfAssociado() )
+                      .opcaoVoto( voto.getOpcaoVoto() )
+                      .build();
+    }
+
+    public Voto convertToEntity()
+    {
+        return Voto.builder()
+                   .cpfAssociado( this.cpfAssociado )
+                   .opcaoVoto( this.opcaoVoto )
+                   .build();
+    }
 } 
