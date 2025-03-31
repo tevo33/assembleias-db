@@ -1,0 +1,55 @@
+# Arquivos e pastas gerados pelo Maven
+target/
+*.jar
+*.war
+*.ear
+*.class
+
+# Arquivos de logs
+*.log
+
+# BlueJ
+.ctxt
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Arquivos específicos de IDEs
+.idea/
+.classpath
+.project
+.settings/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# Pacotes
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Logs e databases
+*.log
+*.sql
+*.sqlite
+
+# Arquivos específicos do Maven
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+
+# Evitar ignorar o Maven wrapper jar file
+!/.mvn/wrapper/maven-wrapper.jar
+
+# Evitar ignorar arquivos do Maven wrapper
+!maven-wrapper.jar 
