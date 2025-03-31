@@ -29,7 +29,7 @@ public class CallbackService
 
         String url = callbackConfig.getFullUrl( "sessao-encerrada" );
         
-        if (url == null)
+        if ( url == null )
         {
             log.warn( "URL de callback para sessão encerrada não configurada" );
         
@@ -70,23 +70,30 @@ public class CallbackService
         }
 
         String url = callbackConfig.getFullUrl("resultado-votacao");
-        if (url == null) {
+        
+        if ( url == null )
+        {
             log.warn("URL de callback para resultado de votação não configurada");
+
             return;
         }
 
-        try {
-            log.info("Enviando notificação de resultado de votação para: {}", url);
+        try
+        {
+            log.info( "Enviando notificação de resultado de votação para: {}", url );
             
             HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setContentType( MediaType.APPLICATION_JSON );
             
-            HttpEntity<ResultadoVotacaoDTO> request = new HttpEntity<>(resultado, headers);
-            restTemplate.postForEntity(url, request, String.class);
+            HttpEntity<ResultadoVotacaoDTO> request = new HttpEntity<>( resultado, headers );
+            restTemplate.postForEntity( url, request, String.class );
             
             log.info("Notificação de resultado de votação enviada com sucesso");
-        } catch (Exception e) {
-            log.error("Erro ao enviar notificação de resultado de votação: {}", e.getMessage(), e);
+        }
+        
+        catch ( Exception e )
+        {
+            log.error( "Erro ao enviar notificação de resultado de votação: {}", e.getMessage(), e );
         }
     }
 } 

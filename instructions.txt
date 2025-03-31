@@ -1,4 +1,3 @@
-
 # Implementação da Solução
 
 ## Arquitetura e Design
