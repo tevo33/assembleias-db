@@ -1,0 +1,116 @@
+
+# Implementação da Solução
+
+## Arquitetura e Design
+
+A solução foi desenvolvida utilizando Spring Boot, seguindo os princípios de arquitetura limpa e padrões de projeto. A estrutura do projeto está organizada da seguinte forma:
+
+- **Controller**: Camada responsável por receber as requisições HTTP e retornar as respostas
+- **Service**: Camada que contém a lógica de negócio da aplicação
+- **Repository**: Camada de acesso a dados, utilizando Spring Data JPA
+- **Model**: Entidades que representam os objetos do domínio
+- **DTO**: Objetos para transferência de dados entre as camadas
+- **Exception**: Classes para tratamento de exceções
+- **Client**: Cliente fake para validação de CPF (Tarefa Bônus 1)
+- **Config**: Classes de configuração
+
+## Funcionalidades Implementadas
+
+1. **Cadastro de Pautas**: Permite criar, listar e buscar pautas
+2. **Sessões de Votação**: Permite abrir sessões de votação para pautas
+3. **Registro de Votos**: Permite que associados votem (sim/não) em pautas com sessões abertas
+4. **Contabilização de Resultados**: Permite obter o resultado da votação de uma pauta
+
+## Desafios Bônus Implementados
+
+### Tarefa Bônus 1 - Integração com sistemas externos
+
+Foi implementado um cliente fake (`CpfValidatorClient`) que simula a integração com um sistema externo para validação de CPF. O cliente:
+
+- Valida o CPF
+- Simula aleatoriamente CPFs inválidos (30% de chance)
+- Para CPFs válidos, simula aleatoriamente se o associado está habilitado ou não para votar
+
+Quando um CPF é inválido, a API retorna o status 404 (Not Found). Quando o associado não está habilitado para votar, a API retorna o status 400 (Bad Request).
+
+### Tarefa Bônus 2 - Performance
+
+Para garantir a performance da aplicação em cenários com milhares de votos, foram implementadas as seguintes estratégias:
+
+1. **Indexação de Banco de Dados**: As tabelas possuem índices apropriados para consultas frequentes
+2. **Paginação**: As consultas que podem retornar muitos resultados implementam paginação
+3. **Consultas Otimizadas**: Utilizamos consultas específicas (count, findById) em vez de carregar objetos completos
+4. **Controle de Transações**: Definição adequada do escopo das transações
+5. **FetchType LAZY**: Para evitar carregamento desnecessário de objetos relacionados
+
+### Tarefa Bônus 3 - Versionamento da API
+
+Para o versionamento da API, adotei a estratégia de versionamento por caminho (URL path), que é uma abordagem simples e amplamente utilizada. As URLs incluem o número da versão, como por exemplo:
+
+```
+/api/v1/pautas
+/api/v1/sessoes
+/api/v1/votos
+```
+
+## Como Executar o Projeto
+
+### Pré-requisitos
+
+- Java 11 ou superior
+- Maven 3.6 ou superior
+- Git
+
+### Passos para Execução`
+
+1. Compile o projeto:
+   ```
+   mvn clean install
+   ```
+
+2. Execute a aplicação:
+   ```
+   mvn spring-boot:run
+   ```
+
+3. Acesse a aplicação:
+   - API: http://localhost:8080/api
+   - Console H2 (banco de dados): http://localhost:8080/api/h2-console
+     - JDBC URL: jdbc:h2:file:./data/votacao
+     - Username: sa
+     - Password: password
+
+### Exemplos de Requisições
+
+#### Criar uma pauta
+```
+POST http://localhost:8080/api/v1/pautas
+{
+    "titulo": "Pauta 2025",
+    "descricao": "Votação para Pauta de 2025"
+}
+```
+
+#### Abrir sessão de votação
+```
+POST http://localhost:8080/api/v1/sessoes?pautaId=1&duracaoMinutos=5
+```
+
+#### Registrar voto
+```
+POST http://localhost:8080/api/v1/votos
+{
+    "pautaId": 1,
+    "cpfAssociado": "12345678901",
+    "opcaoVoto": "SIM"
+}
+```
+
+#### Obter resultado da votação
+```
+GET http://localhost:8080/api/v1/sessoes/1/resultado
+```
+
+## Considerações sobre o Desenvolvimento
+
+- **Testes Unitários**: Implementados para garantir a qualidade do código
