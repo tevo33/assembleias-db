@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @RestController
@@ -15,18 +16,18 @@ import java.util.Map;
 public class CallbackTestController
 {
     @PostMapping( "/sessao-encerrada" )
-    public ResponseEntity<String> receberNotificacaoSessaoEncerrada( @RequestBody Map<String, Object> payload )
+    public CompletableFuture<ResponseEntity<String>> receberNotificacaoSessaoEncerrada( @RequestBody Map<String, Object> payload )
     {
         log.info( "Callback recebido - Sessão Encerrada: {}", payload );
     
-        return ResponseEntity.ok( "Callback de sessão encerrada recebido com sucesso" );
+        return CompletableFuture.completedFuture( ResponseEntity.ok(  "Callback de sessão encerrada recebido com sucesso" ) );
     }
 
     @PostMapping( "/resultado-votacao" )
-    public ResponseEntity<String> receberNotificacaoResultadoVotacao( @RequestBody Map<String, Object> payload )
+    public CompletableFuture<ResponseEntity<String>> receberNotificacaoResultadoVotacao( @RequestBody Map<String, Object> payload )
     {
         log.info( "Callback recebido - Resultado Votação: {}", payload );
         
-        return ResponseEntity.ok( "Callback de resultado de votação recebido com sucesso" );
+        return CompletableFuture.completedFuture( ResponseEntity.ok(  "Callback de resultado de votação recebido com sucesso" ) );
     }
 } 

@@ -84,7 +84,7 @@ public class VotoControllerIT
     }
 
     @Test
-    @DisplayName( "Deve registrar voto com sucesso" )
+    @DisplayName( "Deve aceitar solicitação assíncrona de registro de voto" )
     void registrarVotoComSucesso() throws Exception
     {
         VotoDTO votoDTO = VotoDTO.builder()
@@ -98,11 +98,7 @@ public class VotoControllerIT
                                         .content( objectMapper.writeValueAsString( votoDTO ) ) )
                                         .andDo( MockMvcResultHandlers.print() );
 
-        response.andExpect( status().isCreated() )
-                .andExpect( jsonPath( "$.id", is( notNullValue() ) ) )
-                .andExpect( jsonPath( "$.pautaId", is( pauta.getId().intValue() ) ) )
-                .andExpect( jsonPath( "$.cpfAssociado", is( votoDTO.getCpfAssociado() ) ) )
-                .andExpect( jsonPath( "$.opcaoVoto", is( votoDTO.getOpcaoVoto().toString() ) ) );
+        response.andExpect( status().isCreated() );
     }
 
     @Test
@@ -143,28 +139,19 @@ public class VotoControllerIT
 
     @Test
     @DisplayName( "Deve retornar 404 ao tentar votar em uma pauta inexistente" )
-    void registrarVotoPautaInexistente()
+    void registrarVotoPautaInexistente() throws Exception
     {
         VotoDTO votoDTO = VotoDTO.builder()
                                  .pautaId( 99999L )
                                  .cpfAssociado( "12345678901" )
                                  .opcaoVoto( OpcaoVoto.SIM )
                                  .build();
-    }
-    
-    @Test
-    @DisplayName( "Deve retornar 400 ao tentar votar mais de uma vez com o mesmo CPF" )
-    void registrarVotoDuplicado() throws Exception
-    {
-        VotoDTO primeiroVoto = VotoDTO.builder()
-                                     .pautaId( pauta.getId() )
-                                     .cpfAssociado( "12345678901" )
-                                     .opcaoVoto( OpcaoVoto.SIM )
-                                     .build();
-        
-        mockMvc.perform( post( "/v1/votos" )
-                .contentType( MediaType.APPLICATION_JSON )
-                .content( objectMapper.writeValueAsString( primeiroVoto ) ) )
-                .andExpect( status().isCreated() );
+                                 
+        ResultActions response = mockMvc.perform( post( "/v1/votos" )
+                                        .contentType( MediaType.APPLICATION_JSON )
+                                        .content( objectMapper.writeValueAsString( votoDTO ) ) )
+                                        .andDo( MockMvcResultHandlers.print() );
+
+        response.andExpect( status().isNotFound() );
     }
 } 

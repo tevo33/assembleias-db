@@ -2,8 +2,8 @@ package com.cooperativismo.votacao.service;
 
 import com.cooperativismo.votacao.client.CpfValidatorClient;
 import com.cooperativismo.votacao.dto.ValidacaoCpfDTO;
+import com.cooperativismo.votacao.dto.VotacaoMessage;
 import com.cooperativismo.votacao.dto.VotoDTO;
-import com.cooperativismo.votacao.exception.BusinessException;
 import com.cooperativismo.votacao.exception.ResourceNotFoundException;
 import com.cooperativismo.votacao.model.Pauta;
 import com.cooperativismo.votacao.model.SessaoVotacao;
@@ -26,9 +26,10 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 
-@ExtendWith( MockitoExtension.class )
+@ExtendWith(MockitoExtension.class)
 class VotoServiceTest
 {
     @Mock
@@ -42,6 +43,9 @@ class VotoServiceTest
 
     @Mock
     private CpfValidatorClient cpfValidatorClient;
+    
+    @Mock
+    private KafkaService kafkaService;
 
     @InjectMocks
     private VotoService votoService;
@@ -56,120 +60,163 @@ class VotoServiceTest
     void setUp()
     {
         pauta = Pauta.builder()
-                     .id( 1L )
-                     .titulo( "Pauta de Teste" )
-                     .descricao( "Descrição da pauta de teste" )
+                     .id(1L)
+                     .titulo("Pauta de Teste")
+                     .descricao("Descrição da pauta de teste")
                      .build();
 
         LocalDateTime agora = LocalDateTime.now();
 
         sessaoVotacao = SessaoVotacao.builder()
-                                     .id( 1L )
-                                     .pauta( pauta )
-                                     .dataAbertura( agora )
-                                     .dataFechamento( agora.plusMinutes( 5 ) )
-                                     .ativa( true )
+                                     .id(1L)
+                                     .pauta(pauta)
+                                     .dataAbertura(agora)
+                                     .dataFechamento(agora.plusMinutes(5))
+                                     .ativa(true)
                                      .build();
 
         voto = Voto.builder()
-                   .id( 1L )
-                   .pauta( pauta )
-                   .cpfAssociado( cpfValido )
-                   .opcaoVoto( OpcaoVoto.SIM )
-                   .dataVoto( LocalDateTime.now() )
+                   .id(1L)
+                   .pauta(pauta)
+                   .cpfAssociado(cpfValido)
+                   .opcaoVoto(OpcaoVoto.SIM)
+                   .dataVoto(LocalDateTime.now())
                    .build();
 
         votoDTO = VotoDTO.builder()
-                         .pautaId( 1L )
-                         .cpfAssociado( cpfValido )
-                         .opcaoVoto( OpcaoVoto.SIM )
+                         .pautaId(1L)
+                         .cpfAssociado(cpfValido)
+                         .opcaoVoto(OpcaoVoto.SIM)
                          .build();
     }
 
     @Test
-    @DisplayName( "Deve registrar voto com sucesso" )
-    void registrarVotoComSucesso()
+    @DisplayName("Deve enviar mensagem para registrar voto de forma assíncrona")
+    void registrarVoto()
     {
-        when( pautaRepository.findById( 1L ) ).thenReturn( Optional.of( pauta ) );
-        when( sessaoVotacaoRepository.findByPautaId( 1L ) ).thenReturn( Optional.of( sessaoVotacao ) );
-        when( votoRepository.findByPautaIdAndCpfAssociado( 1L, cpfValido ) ).thenReturn( Optional.empty() );
-        when( cpfValidatorClient.validarCpf( anyString() ) ).thenReturn( new ValidacaoCpfDTO( "ABLE_TO_VOTE" ) );
-        when( votoRepository.save( any( Voto.class ) ) ).thenReturn( voto );
-
-        VotoDTO result = votoService.registrarVoto( votoDTO );
-
-        assertNotNull( result );
-        assertEquals( voto.getId(), result.getId() );
-        assertEquals( voto.getPauta().getId(), result.getPautaId() );
-        assertEquals( voto.getCpfAssociado(), result.getCpfAssociado() );
-        assertEquals( voto.getOpcaoVoto(), result.getOpcaoVoto() );
-    }
-
-    @Test
-    @DisplayName( "Deve lançar exceção ao tentar votar em pauta inexistente" )
-    void registrarVotoPautaInexistente()
-    {
-        when( pautaRepository.findById( 99L ) ).thenReturn( Optional.empty() );
-
-        votoDTO = VotoDTO.builder()
-                         .pautaId( 99L )
-                         .cpfAssociado( cpfValido )
-                         .opcaoVoto( OpcaoVoto.SIM )
-                         .build();
-
-        assertThrows( ResourceNotFoundException.class, () -> 
-        {
-            votoService.registrarVoto( votoDTO );
-        } );
-    }
-
-    @Test
-    @DisplayName( "Deve lançar exceção ao tentar votar em pauta sem sessão de votação" )
-    void registrarVotoSemSessaoVotacao()
-    {
-        when( pautaRepository.findById( 1L ) ).thenReturn( Optional.of( pauta ) );
-        when( sessaoVotacaoRepository.findByPautaId( 1L ) ).thenReturn( Optional.empty() );
-
-        assertThrows( BusinessException.class, () -> 
-        {
-            votoService.registrarVoto( votoDTO );
-        } );
-    }
-
-    @Test
-    @DisplayName( "Deve lançar exceção ao tentar votar em sessão encerrada" )
-    void registrarVotoSessaoEncerrada()
-    {
-        LocalDateTime passado = LocalDateTime.now().minusHours( 1 );
+        when(cpfValidatorClient.validarCpf(anyString())).thenReturn(new ValidacaoCpfDTO("ABLE_TO_VOTE"));
+        doNothing().when(kafkaService).sendMessage(eq("votacao-topic"), any(VotacaoMessage.class));
         
-        sessaoVotacao = SessaoVotacao.builder()
-                                     .id( sessaoVotacao.getId() )
-                                     .pauta( sessaoVotacao.getPauta() )
-                                     .dataAbertura( sessaoVotacao.getDataAbertura() )
-                                     .dataFechamento( passado )
-                                     .ativa( sessaoVotacao.isAtiva() )
-                                     .build();
-
-        when( pautaRepository.findById( 1L ) ).thenReturn( Optional.of( pauta ) );
-        when( sessaoVotacaoRepository.findByPautaId( 1L ) ).thenReturn( Optional.of( sessaoVotacao ) );
-
-        assertThrows( BusinessException.class, () ->
-        {
-            votoService.registrarVoto( votoDTO );
-        } );
+        votoService.registrarVoto(votoDTO);
+        
+        verify(cpfValidatorClient, times(1)).validarCpf(anyString());
+        verify(kafkaService, times(1)).sendMessage(eq("votacao-topic"), any(VotacaoMessage.class));
     }
-
+    
     @Test
-    @DisplayName( "Deve lançar exceção ao tentar votar mais de uma vez na mesma pauta" )
-    void registrarVotoDuplicado()
+    @DisplayName("Deve processar mensagem de voto com sucesso")
+    void processarVotoComSucesso()
     {
-        when( pautaRepository.findById( 1L ) ).thenReturn( Optional.of( pauta ) );
-        when( sessaoVotacaoRepository.findByPautaId( 1L ) ).thenReturn( Optional.of( sessaoVotacao ) );
-        when( votoRepository.findByPautaIdAndCpfAssociado( 1L, cpfValido ) ).thenReturn( Optional.of( voto ) );
-
-        assertThrows( BusinessException.class, () -> 
-        {
-            votoService.registrarVoto( votoDTO );
-        } );
+        VotacaoMessage message = new VotacaoMessage(
+                                null,
+                                1L,
+                                cpfValido,
+                                "SIM",
+                                System.currentTimeMillis()
+                             );
+                            
+        when(pautaRepository.findById(1L)).thenReturn(Optional.of(pauta));
+        when(sessaoVotacaoRepository.findByPautaId(1L)).thenReturn(Optional.of(sessaoVotacao));
+        when(votoRepository.findByPautaIdAndCpfAssociado(1L, cpfValido)).thenReturn(Optional.empty());
+        when(votoRepository.save(any(Voto.class))).thenReturn(voto);
+        
+        votoService.processarVoto(message);
+        
+        verify(pautaRepository, times(1)).findById(1L);
+        verify(sessaoVotacaoRepository, times(1)).findByPautaId(1L);
+        verify(votoRepository, times(1)).findByPautaIdAndCpfAssociado(1L, cpfValido);
+        verify(votoRepository, times(1)).save(any(Voto.class));
+    }
+    
+    @Test
+    @DisplayName("Não deve processar voto quando pauta não existe")
+    void processarVotoPautaInexistente()
+    {
+        VotacaoMessage message = new VotacaoMessage(
+                                null,
+                                99L,
+                                cpfValido,
+                                "SIM",
+                                System.currentTimeMillis()
+                             );
+                            
+        when(pautaRepository.findById(99L)).thenThrow(new ResourceNotFoundException("Pauta", 99L));
+        
+        assertThrows(ResourceNotFoundException.class, () -> {
+            votoService.processarVoto(message);
+        });
+        
+        verify(votoRepository, never()).save(any(Voto.class));
+    }
+    
+    @Test
+    @DisplayName("Não deve processar voto quando sessão não existe")
+    void processarVotoSemSessaoVotacao()
+    {
+        VotacaoMessage message = new VotacaoMessage(
+                                null,
+                                1L,
+                                cpfValido,
+                                "SIM",
+                                System.currentTimeMillis()
+                             );
+                            
+        when(pautaRepository.findById(1L)).thenReturn(Optional.of(pauta));
+        when(sessaoVotacaoRepository.findByPautaId(1L)).thenReturn(Optional.empty());
+        
+        votoService.processarVoto(message);
+        
+        verify(votoRepository, never()).save(any(Voto.class));
+    }
+    
+    @Test
+    @DisplayName("Não deve processar voto quando sessão está encerrada")
+    void processarVotoSessaoEncerrada()
+    {
+        VotacaoMessage message = new VotacaoMessage(
+                                null,
+                                1L,
+                                cpfValido,
+                                "SIM",
+                                System.currentTimeMillis()
+                             );
+        
+        LocalDateTime passado = LocalDateTime.now().minusHours(1);
+        
+        SessaoVotacao sessaoEncerrada = SessaoVotacao.builder()
+                                     .id(sessaoVotacao.getId())
+                                     .pauta(sessaoVotacao.getPauta())
+                                     .dataAbertura(sessaoVotacao.getDataAbertura())
+                                     .dataFechamento(passado)
+                                     .ativa(sessaoVotacao.isAtiva())
+                                     .build();
+                            
+        when(pautaRepository.findById(1L)).thenReturn(Optional.of(pauta));
+        when(sessaoVotacaoRepository.findByPautaId(1L)).thenReturn(Optional.of(sessaoEncerrada));
+        
+        votoService.processarVoto(message);
+        
+        verify(votoRepository, never()).save(any(Voto.class));
+    }
+    
+    @Test
+    @DisplayName("Não deve processar voto duplicado")
+    void processarVotoDuplicado()
+    {
+        VotacaoMessage message = new VotacaoMessage(
+                                null,
+                                1L,
+                                cpfValido,
+                                "SIM",
+                                System.currentTimeMillis()
+                             );
+                            
+        when(pautaRepository.findById(1L)).thenReturn(Optional.of(pauta));
+        when(sessaoVotacaoRepository.findByPautaId(1L)).thenReturn(Optional.of(sessaoVotacao));
+        when(votoRepository.findByPautaIdAndCpfAssociado(1L, cpfValido)).thenReturn(Optional.of(voto));
+        
+        votoService.processarVoto(message);
+        
+        verify(votoRepository, never()).save(any(Voto.class));
     }
 } 

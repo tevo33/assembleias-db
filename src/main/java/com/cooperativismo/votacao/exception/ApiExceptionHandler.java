@@ -1,73 +1,87 @@
 package com.cooperativismo.votacao.exception;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import javax.servlet.http.HttpServletRequest;
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
 
 @RestControllerAdvice
 public class ApiExceptionHandler 
 {
     @ExceptionHandler( ResourceNotFoundException.class )
-    @ResponseStatus( HttpStatus.NOT_FOUND )
-    public ErrorResponse handleResourceNotFoundException( ResourceNotFoundException ex, HttpServletRequest request )
+    public ResponseEntity<ErrorResponse> handleResourceNotFoundException( ResourceNotFoundException ex, HttpServletRequest request )
     {
-        return ErrorResponse.builder().timestamp( LocalDateTime.now() )
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                                      .timestamp( LocalDateTime.now() )
                                       .status( HttpStatus.NOT_FOUND.value() )
                                       .error( "Recurso não encontrado" )
                                       .message( ex.getMessage() )
                                       .path( request.getRequestURI() )
                                       .build();
+        
+        return ResponseEntity.status( HttpStatus.NOT_FOUND )
+                             .contentType( MediaType.APPLICATION_JSON )
+                             .body( errorResponse );
     }
 
     @ExceptionHandler( InvalidCpfException.class )
-    @ResponseStatus( HttpStatus.NOT_FOUND )
-    public ErrorResponse handleInvalidCpfException( InvalidCpfException ex, HttpServletRequest request )
+    public ResponseEntity<ErrorResponse> handleInvalidCpfException( InvalidCpfException ex, HttpServletRequest request )
     {
-        return ErrorResponse.builder().timestamp( LocalDateTime.now() )
-                                      .status( HttpStatus.NOT_FOUND.value() )
-                                      .error( "CPF inválido" )
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                                      .timestamp( LocalDateTime.now() )
+                                      .status( HttpStatus.BAD_REQUEST.value() )
+                                      .error("CPF inválido" )
                                       .message( ex.getMessage() )
                                       .path( request.getRequestURI() )
                                       .build();
+        
+        return ResponseEntity.status( HttpStatus.BAD_REQUEST )
+                             .contentType( MediaType.APPLICATION_JSON )
+                             .body( errorResponse );
     }
 
     @ExceptionHandler( UnableToVoteException.class )
-    @ResponseStatus( HttpStatus.BAD_REQUEST )
-    public ErrorResponse handleUnableToVoteException( UnableToVoteException ex, HttpServletRequest request)
+    public ResponseEntity<ErrorResponse> handleUnableToVoteException( UnableToVoteException ex, HttpServletRequest request)
     {
-        return ErrorResponse.builder().timestamp( LocalDateTime.now() )
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                                      .timestamp( LocalDateTime.now() )
                                       .status( HttpStatus.BAD_REQUEST.value() )
                                       .error( "Não autorizado para votar" )
                                       .message( ex.getMessage() )
                                       .path( request.getRequestURI() )
                                       .build();
+        
+        return ResponseEntity.status( HttpStatus.BAD_REQUEST )
+                             .contentType( MediaType.APPLICATION_JSON )
+                             .body( errorResponse );
     }
 
     @ExceptionHandler( BusinessException.class )
-    @ResponseStatus( HttpStatus.BAD_REQUEST )
-    public ErrorResponse handleBusinessException( BusinessException ex, HttpServletRequest request )
+    public ResponseEntity<ErrorResponse> handleBusinessException( BusinessException ex, HttpServletRequest request )
     {
-        return ErrorResponse.builder().timestamp( LocalDateTime.now() )
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                                      .timestamp( LocalDateTime.now() )
                                       .status( HttpStatus.BAD_REQUEST.value() )
                                       .error( "Erro de negócio" )
                                       .message( ex.getMessage() )
                                       .path( request.getRequestURI() )
                                       .build();
+        
+        return ResponseEntity.status( HttpStatus.BAD_REQUEST )
+                             .contentType( MediaType.APPLICATION_JSON )
+                             .body( errorResponse );
     }
 
     @ExceptionHandler( MethodArgumentNotValidException.class )
-    @ResponseStatus( HttpStatus.BAD_REQUEST )
     public ResponseEntity<Map<String, String>> handleValidationExceptions( MethodArgumentNotValidException ex )
     {
         Map<String, String> errors = new HashMap<>();
@@ -80,29 +94,24 @@ public class ApiExceptionHandler
             errors.put( fieldName, errorMessage );
         } );
         
-        return ResponseEntity.badRequest().body( errors );
+        return ResponseEntity.badRequest()
+                             .contentType( MediaType.APPLICATION_JSON )
+                             .body( errors );
     }
 
     @ExceptionHandler( Exception.class )
-    @ResponseStatus( HttpStatus.INTERNAL_SERVER_ERROR )
-    public ErrorResponse handleGlobalException( Exception ex, HttpServletRequest request ) 
+    public ResponseEntity<ErrorResponse> handleGlobalException( Exception ex, HttpServletRequest request ) 
     {
-        return ErrorResponse.builder().timestamp( LocalDateTime.now() )
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                                      .timestamp( LocalDateTime.now() )
                                       .status( HttpStatus.INTERNAL_SERVER_ERROR.value() )
                                       .error( "Erro no servidor" )
                                       .message( "Ocorreu um erro interno no servidor" )
                                       .path( request.getRequestURI() )
                                       .build();
-    }
-
-    @Builder
-    @AllArgsConstructor
-    public static class ErrorResponse 
-    {
-        private LocalDateTime timestamp;
-        private int status;
-        private String error;
-        private String message;
-        private String path;
+        
+        return ResponseEntity.status( HttpStatus.INTERNAL_SERVER_ERROR )
+                             .contentType( MediaType.APPLICATION_JSON )
+                             .body( errorResponse );
     }
 } 

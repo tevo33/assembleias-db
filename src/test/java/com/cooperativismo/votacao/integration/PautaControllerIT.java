@@ -90,10 +90,17 @@ public class PautaControllerIT
 
     @Test
     @DisplayName( "Deve retornar 404 ao buscar pauta inexistente" )
-    void buscarPautaInexistente() {}
+    void buscarPautaInexistente() throws Exception
+    {
+        ResultActions response = mockMvc.perform( get( "/v1/pautas/{id}", 999L )
+                                        .contentType( MediaType.APPLICATION_JSON ) )
+                                        .andDo( MockMvcResultHandlers.print() );
+
+        response.andExpect( status().isNotFound() );
+    }
 
     @Test
-    @DisplayName( "Deve criar pauta com sucesso" )
+    @DisplayName( "Deve aceitar solicitação assíncrona de criação de pauta" )
     void criarPautaComSucesso() throws Exception
     {
         PautaDTO novaPauta = PautaDTO.builder()
@@ -106,10 +113,7 @@ public class PautaControllerIT
                                         .content( objectMapper.writeValueAsString( novaPauta ) ) )
                                         .andDo( MockMvcResultHandlers.print() );
 
-        response.andExpect( status().isCreated() )
-                .andExpect( jsonPath( "$.id", is( notNullValue() ) ) )
-                .andExpect( jsonPath( "$.titulo", is( novaPauta.getTitulo() ) ) )
-                .andExpect( jsonPath( "$.descricao", is( novaPauta.getDescricao() ) ) );
+        response.andExpect( status().isCreated() );
     }
 
     @Test

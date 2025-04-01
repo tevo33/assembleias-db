@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
 
 @Configuration
-@EnableConfigurationProperties(CallbackConfig.class)
+@EnableConfigurationProperties( CallbackConfig.class )
 public class AppConfig {
     
     @Bean

@@ -1,8 +1,8 @@
 package com.cooperativismo.votacao.service;
 
 import com.cooperativismo.votacao.client.CpfValidatorClient;
+import com.cooperativismo.votacao.dto.VotacaoMessage;
 import com.cooperativismo.votacao.dto.VotoDTO;
-import com.cooperativismo.votacao.exception.BusinessException;
 import com.cooperativismo.votacao.exception.ResourceNotFoundException;
 import com.cooperativismo.votacao.model.Pauta;
 import com.cooperativismo.votacao.model.SessaoVotacao;
@@ -26,46 +26,98 @@ public class VotoService
     private final PautaRepository pautaRepository;
     private final SessaoVotacaoRepository sessaoVotacaoRepository;
     private final CpfValidatorClient cpfValidatorClient;
+    private final KafkaService kafkaService;
 
-    @Transactional
-    public VotoDTO registrarVoto( VotoDTO votoDTO )
+    public void registrarVoto(VotoDTO votoDTO)
     {
-        log.info( "Registrando voto do associado {} na pauta {}", votoDTO.getCpfAssociado(), votoDTO.getPautaId() );
+        log.info("Enviando solicitação para registrar voto do associado {} na pauta {}", 
+                votoDTO.getCpfAssociado(), votoDTO.getPautaId() );
         
-        Pauta pauta = pautaRepository.findById( votoDTO.getPautaId() )
-                                     .orElseThrow( () -> new ResourceNotFoundException( "Pauta", votoDTO.getPautaId() ) );
+        cpfValidatorClient.validarCpf(votoDTO.getCpfAssociado());
         
-        Optional<SessaoVotacao> sessaoOpt = sessaoVotacaoRepository.findByPautaId( votoDTO.getPautaId() );
+        VotacaoMessage mensagem = new VotacaoMessage(
+                null,
+                votoDTO.getPautaId(),
+                votoDTO.getCpfAssociado(),
+                votoDTO.getOpcaoVoto().toString(),
+                System.currentTimeMillis());
         
-        if ( sessaoOpt.isEmpty() ) 
+        kafkaService.sendMessage("votacao-topic", mensagem);
+
+        log.info("Mensagem enviada para o Kafka: solicitação de registro de voto para processamento");
+    }
+    
+    @Transactional
+    public void processarVoto(VotacaoMessage message)
+    {
+        log.info("Processando mensagem de voto: {}", message);
+        
+        Pauta pauta = pautaRepository.findById(message.getPautaId())
+                .orElseThrow(() -> new ResourceNotFoundException("Pauta", message.getPautaId()));
+        
+        Optional<SessaoVotacao> sessaoOpt = sessaoVotacaoRepository.findByPautaId(message.getPautaId());
+        
+        if (sessaoOpt.isEmpty()) 
         {
-            throw new BusinessException( "Não existe sessão de votação aberta para esta pauta" );
+            log.error("Não existe sessão de votação para a pauta {}", message.getPautaId());
+            return;
         }
         
         SessaoVotacao sessao = sessaoOpt.get();
 
-        if ( ! sessao.estaAberta() )
+        if (!sessao.estaAberta())
         {
-            throw new BusinessException( "A sessão de votação está encerrada" );
+            log.error("A sessão de votação para a pauta {} está encerrada", message.getPautaId());
+            return;
         }
         
-        Optional<Voto> votoExistente = votoRepository.findByPautaIdAndCpfAssociado( votoDTO.getPautaId(), votoDTO.getCpfAssociado());
+        Optional<Voto> votoExistente = votoRepository.findByPautaIdAndCpfAssociado(
+                message.getPautaId(), message.getCpfAssociado());
         
-        if ( votoExistente.isPresent() )
+        if (votoExistente.isPresent())
         {
-            throw new BusinessException( "O associado já votou nesta pauta" );
+            log.warn("O associado {} já votou na pauta {}", message.getCpfAssociado(), message.getPautaId());
+            return;
         }
         
-        cpfValidatorClient.validarCpf( votoDTO.getCpfAssociado() );
+        Voto.OpcaoVoto opcaoVoto = Voto.OpcaoVoto.valueOf(message.getVoto());
         
         Voto voto = Voto.builder()
-                        .pauta( pauta )
-                        .cpfAssociado( votoDTO.getCpfAssociado() )
-                        .opcaoVoto( votoDTO.getOpcaoVoto() )
-                        .build();
+                .pauta(pauta)
+                .cpfAssociado(message.getCpfAssociado())
+                .opcaoVoto(opcaoVoto)
+                .build();
         
-        voto = votoRepository.save( voto );
+        voto = votoRepository.save(voto);
+        log.info("Voto registrado com ID: {} para associado: {} na pauta: {}", 
+                voto.getId(), message.getCpfAssociado(), message.getPautaId());
+    }
+
+    @Transactional(readOnly = true)
+    public void verificarPautaExiste(Long pautaId) {
+        pautaRepository.findById(pautaId)
+            .orElseThrow(() -> new ResourceNotFoundException("Pauta", pautaId));
+    }
+
+    @Transactional
+    public VotoDTO registrarVotoCompleto(VotoDTO votoDTO) {
+        log.info("Registrando voto completo do associado {} na pauta {}", 
+                votoDTO.getCpfAssociado(), votoDTO.getPautaId());
         
-        return VotoDTO.convertToDto( voto );
+        cpfValidatorClient.validarCpf(votoDTO.getCpfAssociado());
+        
+        verificarPautaExiste(votoDTO.getPautaId());
+        
+        VotacaoMessage mensagem = new VotacaoMessage(
+                null,
+                votoDTO.getPautaId(),
+                votoDTO.getCpfAssociado(),
+                votoDTO.getOpcaoVoto().toString(),
+                System.currentTimeMillis());
+        
+        kafkaService.sendMessage("votacao-topic", mensagem);
+        log.info("Mensagem enviada para o Kafka: solicitação de registro de voto");
+        
+        return votoDTO;
     }
 } 

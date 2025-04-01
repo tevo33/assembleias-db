@@ -74,7 +74,7 @@ public class SessaoVotacaoControllerIT
     }
 
     @Test
-    @DisplayName( "Deve abrir sessão de votação com sucesso" )
+    @DisplayName( "Deve aceitar solicitação assíncrona de abertura de sessão" )
     void abrirSessaoComSucesso() throws Exception
     {
         ResultActions response = mockMvc.perform( post( "/v1/sessoes" )
@@ -83,30 +83,20 @@ public class SessaoVotacaoControllerIT
                                         .contentType( MediaType.APPLICATION_JSON ) )
                                         .andDo( MockMvcResultHandlers.print() );
 
-        response.andExpect( status().isCreated() )
-                .andExpect( jsonPath( "$.id", is( notNullValue() ) ) )
-                .andExpect( jsonPath( "$.pautaId", is( pauta.getId().intValue() ) ) )
-                .andExpect( jsonPath( "$.ativa", is( true ) ) )
-                .andExpect( jsonPath( "$.dataAbertura", is( notNullValue() ) ) )
-                .andExpect( jsonPath( "$.dataFechamento", is( notNullValue() ) ) );
+        response.andExpect( status().isCreated() );
     }
 
     @Test
     @DisplayName( "Deve retornar 404 ao abrir sessão com pauta inexistente" )
-    void abrirSessaoPautaInexistente() {}
-
-    @Test
-    @DisplayName( "Deve retornar 400 ao abrir sessão para pauta que já possui sessão aberta" )
-    void abrirSessaoPautaJaTemSessao()
+    void abrirSessaoPautaInexistente() throws Exception
     {
-        SessaoVotacao sessao = SessaoVotacao.builder()
-                                            .pauta( pauta )
-                                            .dataAbertura( LocalDateTime.now() )
-                                            .dataFechamento( LocalDateTime.now().plusMinutes( 5 ) )
-                                            .ativa( true )
-                                            .build();
+        ResultActions response = mockMvc.perform( post( "/v1/sessoes" )
+                                        .param( "pautaId", "999" )
+                                        .param( "duracaoMinutos", "5" )
+                                        .contentType( MediaType.APPLICATION_JSON ) )
+                                        .andDo( MockMvcResultHandlers.print() );
 
-        sessaoVotacaoRepository.save( sessao );
+        response.andExpect( status().isNotFound() );
     }
 
     @Test
@@ -160,9 +150,23 @@ public class SessaoVotacaoControllerIT
 
     @Test
     @DisplayName( "Deve retornar 404 ao obter resultado com pauta inexistente" )
-    void obterResultadoPautaInexistente() {}
+    void obterResultadoPautaInexistente() throws Exception
+    {
+        ResultActions response = mockMvc.perform( get( "/v1/sessoes/{pautaId}/resultado", 999L )
+                                        .contentType( MediaType.APPLICATION_JSON ) )
+                                        .andDo( MockMvcResultHandlers.print() );
+
+        response.andExpect( status().isNotFound() );
+    }
 
     @Test
     @DisplayName( "Deve retornar 400 ao obter resultado para pauta sem sessão de votação" )
-    void obterResultadoPautaSemSessao() {}
+    void obterResultadoPautaSemSessao() throws Exception
+    {
+        ResultActions response = mockMvc.perform( get( "/v1/sessoes/{pautaId}/resultado", pauta.getId() )
+                                        .contentType( MediaType.APPLICATION_JSON ) )
+                                        .andDo( MockMvcResultHandlers.print() );
+
+        response.andExpect( status().isBadRequest() );
+    }
 } 

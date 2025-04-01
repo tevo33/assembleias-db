@@ -1,6 +1,7 @@
 package com.cooperativismo.votacao.controller;
 
 import com.cooperativismo.votacao.dto.PautaDTO;
+import com.cooperativismo.votacao.exception.ResourceNotFoundException;
 import com.cooperativismo.votacao.service.PautaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 
 @Slf4j
@@ -30,12 +32,11 @@ public class PautaController
     @ApiResponses( value = {
         @ApiResponse( responseCode = "200", description = "Pautas listadas com sucesso" )
     } )
-
-    public ResponseEntity<List<PautaDTO>> listarPautas()
+    public CompletableFuture<ResponseEntity<List<PautaDTO>>> listarPautas()
     {
         log.info( "Recebida requisição para listar pautas" );
     
-        return ResponseEntity.ok( pautaService.listarPautas() );
+        return CompletableFuture.supplyAsync( () -> ResponseEntity.ok( pautaService.listarPautas() ) );
     }
 
     @GetMapping( "/{id}" )
@@ -44,27 +45,43 @@ public class PautaController
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Pauta encontrada com sucesso"),
         @ApiResponse(responseCode = "404", description = "Pauta não encontrada")
-    })
-    public ResponseEntity<PautaDTO> buscarPauta( @PathVariable Long id )
+    } )
+    public CompletableFuture<ResponseEntity<PautaDTO>> buscarPauta( @PathVariable Long id )
     {
         log.info( "Recebida requisição para buscar pauta ID: {}", id );
     
-        return ResponseEntity.ok( pautaService.buscarPauta( id ) );
+        return CompletableFuture.supplyAsync( () ->
+        {
+            try
+            {
+                PautaDTO pauta = pautaService.buscarPauta( id );
+
+                return ResponseEntity.ok( pauta );
+            }
+            
+            catch ( ResourceNotFoundException e ) 
+            {
+                throw e;
+            }
+        } );
     }
 
     @PostMapping
     @Operation(summary = "Criar nova pauta",
-               description = "Cria uma nova pauta no sistema")
+               description = "Cria uma nova pauta no sistema de forma assíncrona")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Pauta criada com sucesso"),
         @ApiResponse(responseCode = "400", description = "Requisição inválida")
     } )
-    public ResponseEntity<PautaDTO> criarPauta( @Valid @RequestBody PautaDTO pautaDTO ) 
+    public CompletableFuture<ResponseEntity<PautaDTO>> criarPauta( @Valid @RequestBody PautaDTO pautaDTO ) 
     {
-        log.info(  "Recebida requisição para criar pauta: {}", pautaDTO.getTitulo() );
+        log.info(   "Recebida requisição para criar pauta: {}", pautaDTO.getTitulo() );
     
-        PautaDTO pautaCriada = pautaService.criarPauta( pautaDTO );
-        
-        return ResponseEntity.status( HttpStatus.CREATED ).body( pautaCriada );
+        return CompletableFuture.supplyAsync( () ->
+        {
+            pautaService.criarPauta( pautaDTO );
+          
+            return ResponseEntity.status( HttpStatus.CREATED ).body( pautaDTO );
+        } );
     }
 } 

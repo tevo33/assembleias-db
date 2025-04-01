@@ -1,6 +1,7 @@
 package com.cooperativismo.votacao.controller;
 
 import com.cooperativismo.votacao.dto.VotoDTO;
+import com.cooperativismo.votacao.exception.ResourceNotFoundException;
 import com.cooperativismo.votacao.service.VotoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @RestController
@@ -28,19 +30,30 @@ public class VotoController
 
     @PostMapping
     @Operation( summary = "Registrar voto",
-               description = "Registra o voto de um associado em uma pauta específica" )
+               description = "Solicita o registro assíncrono do voto de um associado em uma pauta específica" )
     @ApiResponses( value = {
         @ApiResponse( responseCode = "201", description = "Voto registrado com sucesso" ),
-        @ApiResponse( responseCode = "400", description = "Requisição inválida, associado já votou ou não está habilitado para votar" ),
-        @ApiResponse( responseCode = "404", description = "Pauta não encontrada ou CPF inválido" )
+        @ApiResponse( responseCode = "400", description = "Requisição inválida ou CPF inválido" ),
+        @ApiResponse( responseCode = "404", description = "Pauta não encontrada" )
     } )
-    public ResponseEntity<VotoDTO> registrarVoto( @Valid @RequestBody VotoDTO votoDTO )
+    public CompletableFuture<ResponseEntity<VotoDTO>> registrarVoto( @Valid @RequestBody VotoDTO votoDTO )
     {
-        log.info("Recebida requisição para registrar voto do associado {} na pauta {}",
-                votoDTO.getCpfAssociado(), votoDTO.getPautaId());
+        log.info( "Recebida requisição para registrar voto do associado {} na pauta {}", votoDTO.getCpfAssociado(), votoDTO.getPautaId() );
         
-        VotoDTO votoCriado = votoService.registrarVoto( votoDTO );
-        
-        return ResponseEntity.status( HttpStatus.CREATED ).body( votoCriado );
+        return CompletableFuture.supplyAsync( () ->
+        {
+            try
+            {
+                votoService.verificarPautaExiste( votoDTO.getPautaId() );
+                votoService.registrarVoto( votoDTO );
+            
+                return ResponseEntity.status( HttpStatus.CREATED ).body( votoDTO );
+            }
+            
+            catch ( ResourceNotFoundException e )
+            {
+                throw e;
+            }
+        } );
     }
 } 
