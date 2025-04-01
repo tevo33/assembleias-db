@@ -1,7 +1,6 @@
 package com.cooperativismo.votacao.controller;
 
 import com.cooperativismo.votacao.dto.PautaDTO;
-import com.cooperativismo.votacao.exception.ResourceNotFoundException;
 import com.cooperativismo.votacao.service.PautaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -9,11 +8,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -50,38 +49,25 @@ public class PautaController
     {
         log.info( "Recebida requisição para buscar pauta ID: {}", id );
     
-        return CompletableFuture.supplyAsync( () ->
+        return CompletableFuture.supplyAsync( () -> 
         {
-            try
-            {
-                PautaDTO pauta = pautaService.buscarPauta( id );
-
-                return ResponseEntity.ok( pauta );
-            }
-            
-            catch ( ResourceNotFoundException e ) 
-            {
-                throw e;
-            }
+            PautaDTO pauta = pautaService.buscarPauta( id );
+          
+            return ResponseEntity.ok( pauta );
         } );
     }
 
     @PostMapping
     @Operation(summary = "Criar nova pauta",
-               description = "Cria uma nova pauta no sistema de forma assíncrona")
+               description = "Cria uma nova pauta no sistema de forma assíncrona" )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Pauta criada com sucesso"),
-        @ApiResponse(responseCode = "400", description = "Requisição inválida")
+        @ApiResponse(responseCode = "201", description = "Pauta criada com sucesso" ),
+        @ApiResponse(responseCode = "400", description = "Requisição inválida" )
     } )
-    public CompletableFuture<ResponseEntity<PautaDTO>> criarPauta( @Valid @RequestBody PautaDTO pautaDTO ) 
+    public ResponseEntity<Void> criarPauta( @RequestBody PautaDTO pautaDTO )
     {
-        log.info(   "Recebida requisição para criar pauta: {}", pautaDTO.getTitulo() );
-    
-        return CompletableFuture.supplyAsync( () ->
-        {
-            pautaService.criarPauta( pautaDTO );
-          
-            return ResponseEntity.status( HttpStatus.CREATED ).body( pautaDTO );
-        } );
+        CompletableFuture.runAsync( () -> pautaService.criarPauta( pautaDTO ) );
+
+        return ResponseEntity.status( HttpStatus.CREATED ).build();
     }
 } 

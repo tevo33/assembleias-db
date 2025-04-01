@@ -3,6 +3,7 @@ package com.cooperativismo.votacao.service;
 import com.cooperativismo.votacao.dto.NotificacaoMessage;
 import com.cooperativismo.votacao.dto.PautaMessage;
 import com.cooperativismo.votacao.dto.ResultadoMessage;
+import com.cooperativismo.votacao.dto.ResultadoVotacaoDTO;
 import com.cooperativismo.votacao.dto.SessaoMessage;
 import com.cooperativismo.votacao.dto.VotacaoMessage;
 import lombok.RequiredArgsConstructor;
@@ -90,13 +91,15 @@ public class KafkaConsumerService
         {
             log.info("Processando notificação recebida: {}", message);
             
-            if ("SESSAO_ENCERRADA".equals(message.getTipoNotificacao()))
-            {
-                log.info("Notificação de sessão encerrada recebida para pauta ID: {}", message.getPautaId());
-            }
-            else if ("RESULTADO_VOTACAO".equals(message.getTipoNotificacao()))
-            {
-                log.info("Notificação de resultado de votação recebida para pauta ID: {}", message.getPautaId());
+            switch (message.getTipoNotificacao()) {
+                case "SESSAO_ENCERRADA":
+                    processarNotificacaoSessaoEncerrada(message);
+                    break;
+                case "RESULTADO_VOTACAO":
+                    processarNotificacaoResultadoVotacao(message);
+                    break;
+                default:
+                    log.warn("Tipo de notificação desconhecido: {}", message.getTipoNotificacao());
             }
             
             log.info("Notificação processada com sucesso");
@@ -105,6 +108,28 @@ public class KafkaConsumerService
         {
             log.error("Erro ao processar notificação: {}", message, e);
             throw new RuntimeException("Erro ao processar notificação", e);
+        }
+    }
+    
+    private void processarNotificacaoSessaoEncerrada( NotificacaoMessage message )
+    {
+        log.info( "Processando notificação de sessão encerrada para pauta ID: {}", message.getPautaId() );
+    }
+    
+    private void processarNotificacaoResultadoVotacao( NotificacaoMessage message )
+    {
+        log.info( "Processando notificação de resultado de votação para pauta ID: {}", message.getPautaId() );
+        
+        if ( message.getConteudo() != null && message.getConteudo() instanceof ResultadoVotacaoDTO )
+        {
+            ResultadoVotacaoDTO resultado = (ResultadoVotacaoDTO) message.getConteudo();
+
+            log.info( "Resultado da votação: Pauta '{}', Total: {}, Sim: {}, Não: {}, Resultado: {}", 
+                            resultado.getTituloPauta(), 
+                            resultado.getTotalVotos(),
+                            resultado.getVotosSim(),
+                            resultado.getVotosNao(),
+                            resultado.getResultado());
         }
     }
 } 

@@ -1,8 +1,6 @@
 package com.cooperativismo.votacao.controller;
 
 import com.cooperativismo.votacao.dto.ResultadoVotacaoDTO;
-import com.cooperativismo.votacao.exception.BusinessException;
-import com.cooperativismo.votacao.exception.ResourceNotFoundException;
 import com.cooperativismo.votacao.service.SessaoVotacaoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -41,24 +39,12 @@ public class SessaoVotacaoController
         
         return CompletableFuture.supplyAsync( () ->
         {
-            try
-            {
-                sessaoVotacaoService.verificarPautaExiste(pautaId);
-                sessaoVotacaoService.abrirSessao(pautaId, duracaoMinutos);
-                
-                Map<String, Object> resposta = new HashMap<>();
-                resposta.put( "pautaId", pautaId );
-                resposta.put( "ativa", true );
-                resposta.put( "duracaoMinutos", duracaoMinutos != null ? duracaoMinutos : 1 );
-                
-                return ResponseEntity.status( HttpStatus.CREATED ).body( resposta );
-            } 
+            sessaoVotacaoService.verificarPautaExiste( pautaId );
             
-            catch ( ResourceNotFoundException e )
-            {
-                throw e;
-            }
-        });
+            sessaoVotacaoService.abrirSessao( pautaId, duracaoMinutos );
+            
+            return ResponseEntity.status( HttpStatus.CREATED ).build();
+        } );
     }
 
     @GetMapping( "/{pautaId}/resultado" )
@@ -73,19 +59,11 @@ public class SessaoVotacaoController
     {
         log.info( "Recebida requisição para obter resultado da votação da pauta ID: {}", pautaId );
     
-        return CompletableFuture.supplyAsync(() ->
+        return CompletableFuture.supplyAsync( () ->
         {
-            try
-            {
-                ResultadoVotacaoDTO resultado = sessaoVotacaoService.obterResultado( pautaId );
-            
-                return ResponseEntity.ok(resultado);
-            }
-            
-            catch ( ResourceNotFoundException | BusinessException e )
-            {
-                throw e;
-            }
+            ResultadoVotacaoDTO resultado = sessaoVotacaoService.obterResultado( pautaId );
+        
+            return ResponseEntity.ok( resultado );
         } );
     }
 } 

@@ -1,7 +1,6 @@
 package com.cooperativismo.votacao.controller;
 
 import com.cooperativismo.votacao.dto.VotoDTO;
-import com.cooperativismo.votacao.exception.ResourceNotFoundException;
 import com.cooperativismo.votacao.service.VotoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -42,18 +41,10 @@ public class VotoController
         
         return CompletableFuture.supplyAsync( () ->
         {
-            try
-            {
-                votoService.verificarPautaExiste( votoDTO.getPautaId() );
-                votoService.registrarVoto( votoDTO );
+            votoService.verificarPautaExiste( votoDTO.getPautaId() );
+            votoService.registrarVoto( votoDTO );
             
-                return ResponseEntity.status( HttpStatus.CREATED ).body( votoDTO );
-            }
-            
-            catch ( ResourceNotFoundException e )
-            {
-                throw e;
-            }
+            return ResponseEntity.status( HttpStatus.CREATED ).build();
         } );
     }
 } 

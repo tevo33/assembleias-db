@@ -142,11 +142,12 @@ class VotoServiceTest
                             
         when(pautaRepository.findById(99L)).thenThrow(new ResourceNotFoundException("Pauta", 99L));
         
-        assertThrows(ResourceNotFoundException.class, () -> {
-            votoService.processarVoto(message);
-        });
+        assertThrows(ResourceNotFoundException.class, () -> 
+        {
+            votoService.processarVoto( message );
+        } );
         
-        verify(votoRepository, never()).save(any(Voto.class));
+        verify( votoRepository, never() ).save( any( Voto.class ) );
     }
     
     @Test

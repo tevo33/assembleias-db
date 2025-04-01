@@ -215,9 +215,9 @@ public class SessaoVotacaoService
     }
 
     @Transactional(readOnly = true)
-    public void verificarPautaExiste(Long pautaId) {
-        pautaRepository.findById(pautaId)
-            .orElseThrow(() -> new ResourceNotFoundException("Pauta", pautaId));
+    public void verificarPautaExiste( Long pautaId )
+    {
+        pautaRepository.findById( pautaId ).orElseThrow( () -> new ResourceNotFoundException( "Pauta", pautaId ) );
     }
 
     @Transactional

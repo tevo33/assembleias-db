@@ -107,9 +107,9 @@ class PautaServiceTest
         assertThrows(ResourceNotFoundException.class, () -> 
         {
             pautaService.buscarPauta(99L);
-        });
+        } );
 
-        verify(pautaRepository, times(1)).findById(99L);
+        verify( pautaRepository, times(1) ).findById( 99L );
     }
 
     @Test
